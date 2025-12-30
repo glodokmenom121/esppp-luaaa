@@ -1,184 +1,228 @@
---==================================================
+--================================
+-- patrickkkprojeck FULL FINAL
+--================================
+
 -- SERVICES
---==================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 local LP = Players.LocalPlayer
 
---==================================================
+--================================
 -- STATE
---==================================================
-local ESP = {
-    Enabled = false,
-    Text = false,
-    Line = false,
-    Bones = false,
-    InfJump = false
-}
+--================================
+local ESP_ON = false
+local TEXT_ON = false
+local LINE_ON = false
+local BONES_ON = false
+local INFJUMP_ON = false
 
---==================================================
--- GUI
---==================================================
-local gui = Instance.new("ScreenGui", LP.PlayerGui)
-gui.ResetOnSpawn = false
-
-local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0,230,0,320)
-main.Position = UDim2.new(0,20,0.3,0)
-main.BackgroundColor3 = Color3.fromRGB(18,18,18)
-main.Active = true
-main.Draggable = true
-
-local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1,0,0,40)
-title.Text = "ESP MENU"
-title.TextColor3 = Color3.new(1,1,1)
-title.BackgroundColor3 = Color3.fromRGB(12,12,12)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 14
-
-local function Toggle(text, y, callback)
-    local b = Instance.new("TextButton", main)
-    b.Size = UDim2.new(1,-20,0,36)
-    b.Position = UDim2.new(0,10,0,y)
-    b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    b.TextColor3 = Color3.new(1,1,1)
-    b.Font = Enum.Font.Gotham
-    b.TextSize = 13
-    b.Text = text..": OFF"
-
-    b.MouseButton1Click:Connect(function()
-        local state = callback()
-        b.Text = text..": "..(state and "ON" or "OFF")
-    end)
-end
-
-Toggle("ESP",50,function()
-    ESP.Enabled = not ESP.Enabled
-    return ESP.Enabled
-end)
-
-Toggle("NAME + DIST",90,function()
-    ESP.Text = not ESP.Text
-    return ESP.Text
-end)
-
-Toggle("LINE",130,function()
-    ESP.Line = not ESP.Line
-    return ESP.Line
-end)
-
-Toggle("BONES",170,function()
-    ESP.Bones = not ESP.Bones
-    return ESP.Bones
-end)
-
-Toggle("INF JUMP",210,function()
-    ESP.InfJump = not ESP.InfJump
-    return ESP.InfJump
-end)
-
-UIS.InputBegan:Connect(function(i,g)
-    if g then return end
-    if i.KeyCode == Enum.KeyCode.Equals then
-        main.Visible = not main.Visible
-    end
-end)
-
---==================================================
--- INFINITE JUMP
---==================================================
-UIS.JumpRequest:Connect(function()
-    if ESP.InfJump then
-        local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if h then
-            h:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
---==================================================
--- ESP CORE
---==================================================
 local drawings = {}
 
-local function getRoot(char)
-    return char:FindFirstChild("HumanoidRootPart")
-        or char:FindFirstChild("UpperTorso")
-        or char:FindFirstChild("Torso")
-end
-
+--================================
+-- CLEAN PLAYER ESP
+--================================
 local function clear(plr)
     if drawings[plr] then
-        for _,v in pairs(drawings[plr]) do
-            v:Remove()
+        for _,d in pairs(drawings[plr]) do
+            pcall(function() d:Remove() end)
         end
         drawings[plr] = nil
     end
 end
 
+--================================
+-- CREATE DRAWINGS
+--================================
+local function create(plr)
+    drawings[plr] = {
+        text = Drawing.new("Text"),
+        line = Drawing.new("Line"),
+        bones = {}
+    }
+
+    for _,bone in pairs({
+        {"Head","UpperTorso"},
+        {"UpperTorso","LowerTorso"},
+        {"UpperTorso","LeftUpperArm"},
+        {"LeftUpperArm","LeftLowerArm"},
+        {"UpperTorso","RightUpperArm"},
+        {"RightUpperArm","RightLowerArm"},
+        {"LowerTorso","LeftUpperLeg"},
+        {"LeftUpperLeg","LeftLowerLeg"},
+        {"LowerTorso","RightUpperLeg"},
+        {"RightUpperLeg","RightLowerLeg"}
+    }) do
+        local l = Drawing.new("Line")
+        l.Thickness = 4
+        table.insert(drawings[plr].bones,{l,bone})
+    end
+end
+
+--================================
+-- RENDER LOOP
+--================================
 RunService.RenderStepped:Connect(function()
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr == LP then continue end
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if not ESP_ON then
+                clear(plr)
+                continue
+            end
 
-        local char = plr.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local root = char and getRoot(char)
+            if not drawings[plr] then
+                create(plr)
+            end
 
-        if not ESP.Enabled or not char or not hum or hum.Health <= 0 or not root then
-            clear(plr)
-            continue
-        end
+            local hrp = plr.Character.HumanoidRootPart
+            local pos,vis = Camera:WorldToViewportPoint(hrp.Position)
 
-        local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
-        if not onScreen then
-            clear(plr)
-            continue
-        end
+if not vis then
+    -- TEXT
+    if drawings[plr].text then
+        drawings[plr].text.Visible = false
+    end
 
-        drawings[plr] = drawings[plr] or {}
+    -- LINE
+    if drawings[plr].line then
+        drawings[plr].line.Visible = false
+    end
 
-        -- TEXT
-        if ESP.Text then
-            local t = drawings[plr].Text or Drawing.new("Text")
+    -- BONES
+    for _,b in pairs(drawings[plr].bones) do
+        b[1].Visible = false
+    end
+
+    continue
+end
+
+
+            -- TEXT
+            local t = drawings[plr].text
+            t.Visible = TEXT_ON
+            t.Text = plr.Name
+            t.Size = 16
+            t.Font = Drawing.Fonts.UI
             t.Center = true
-            t.Outline = true
-            t.Size = 14
             t.Color = Color3.new(1,1,1)
-            t.Text = plr.Name.." ["..math.floor((Camera.CFrame.Position-root.Position).Magnitude).."]"
-            t.Position = Vector2.new(pos.X,pos.Y-35)
-            t.Visible = true
-            drawings[plr].Text = t
-        end
+            t.Position = Vector2.new(pos.X,pos.Y-50)
 
-        -- LINE
-        if ESP.Line then
-            local l = drawings[plr].Line or Drawing.new("Line")
-            l.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
-            l.To = Vector2.new(pos.X,pos.Y)
-            l.Color = Color3.new(1,1,1)
-            l.Thickness = 1
-            l.Visible = true
-            drawings[plr].Line = l
-        end
+            -- LINE (TRACER)
+            local ln = drawings[plr].line
+            ln.Visible = LINE_ON
+            ln.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
+            ln.To = Vector2.new(pos.X,pos.Y)
+            ln.Color = Color3.new(1,1,1)
+            ln.Thickness = 1
 
-        -- SIMPLE BONES (HEAD → ROOT)
-        if ESP.Bones then
-            local head = char:FindFirstChild("Head")
-            if head then
-                local hpos, hon = Camera:WorldToViewportPoint(head.Position)
-                if hon then
-                    local b = drawings[plr].Bone or Drawing.new("Line")
-                    b.From = Vector2.new(hpos.X,hpos.Y)
-                    b.To = Vector2.new(pos.X,pos.Y)
-                    b.Color = Color3.fromRGB(0,255,0)
-                    b.Thickness = 1
-                    b.Visible = true
-                    drawings[plr].Bone = b
+            -- BONES
+            for _,b in pairs(drawings[plr].bones) do
+                local line,parts = b[1], b[2]
+                local p1 = plr.Character:FindFirstChild(parts[1])
+                local p2 = plr.Character:FindFirstChild(parts[2])
+
+                if BONES_ON and p1 and p2 then
+                    local v1,on1 = Camera:WorldToViewportPoint(p1.Position)
+                    local v2,on2 = Camera:WorldToViewportPoint(p2.Position)
+                    if on1 and on2 then
+                        line.Visible = true
+                        line.From = Vector2.new(v1.X,v1.Y)
+                        line.To = Vector2.new(v2.X,v2.Y)
+                        line.Color = Color3.fromRGB(255,0,0)
+                    else
+                        line.Visible = false
+                    end
+                else
+                    line.Visible = false
                 end
             end
+        else
+            clear(plr)
         end
+    end
+end)
+
+--================================
+-- INFINITE JUMP (SPASI)
+--================================
+UIS.JumpRequest:Connect(function()
+    if INFJUMP_ON then
+        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+
+--================================
+-- GUI
+--================================
+local gui = Instance.new("ScreenGui", LP.PlayerGui)
+gui.Name = "patrickkkprojeck"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,220,0,260)
+frame.Position = UDim2.new(0,20,0.3,0)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,40)
+title.Text = "patrickkkprojeck"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundColor3 = Color3.fromRGB(15,15,15)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+local function btn(text,y,callback)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(1,-20,0,35)
+    b.Position = UDim2.new(0,10,0,y)
+    b.Text = text
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 13
+    b.MouseButton1Click:Connect(function()
+        callback(b)
+    end)
+end
+
+btn("ESP : OFF",50,function(b)
+    ESP_ON = not ESP_ON
+    b.Text = "ESP : "..(ESP_ON and "ON" or "OFF")
+    if not ESP_ON then
+        for p,_ in pairs(drawings) do clear(p) end
+    end
+end)
+
+btn("TEXT : OFF",90,function(b)
+    TEXT_ON = not TEXT_ON
+    b.Text = "TEXT : "..(TEXT_ON and "ON" or "OFF")
+end)
+
+btn("LINE : OFF",130,function(b)
+    LINE_ON = not LINE_ON
+    b.Text = "LINE : "..(LINE_ON and "ON" or "OFF")
+end)
+
+btn("BONES : OFF",170,function(b)
+    BONES_ON = not BONES_ON
+    b.Text = "BONES : "..(BONES_ON and "ON" or "OFF")
+end)
+
+btn("INF JUMP : OFF",210,function(b)
+    INFJUMP_ON = not INFJUMP_ON
+    b.Text = "INF JUMP : "..(INFJUMP_ON and "ON" or "OFF")
+end)
+
+--================================
+-- TOGGLE GUI (+)
+--================================
+UIS.InputBegan:Connect(function(i,gp)
+    if gp then return end
+    if i.KeyCode == Enum.KeyCode.Equals then
+        frame.Visible = not frame.Visible
     end
 end)

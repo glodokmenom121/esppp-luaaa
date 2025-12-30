@@ -109,4 +109,9 @@ end)
 --=====================================
 -- HIDE GUI (=)
 --=====================================
-UIS.InputBegan:Connect(function(input, gp
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.Equals then
+        frame.Visible = not frame.Visible
+    end
+end)

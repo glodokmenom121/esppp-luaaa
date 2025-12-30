@@ -78,37 +78,30 @@ RunService.RenderStepped:Connect(function()
             local hrp = plr.Character.HumanoidRootPart
             local pos,vis = Camera:WorldToViewportPoint(hrp.Position)
 
-if not vis then
-    -- TEXT
-    if drawings[plr].text then
-        drawings[plr].text.Visible = false
-    end
+            local myChar = LP.Character
+            local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+            local distance = myHRP and (myHRP.Position - hrp.Position).Magnitude or 0
 
-    -- LINE
-    if drawings[plr].line then
-        drawings[plr].line.Visible = false
-    end
+            if not vis then
+                drawings[plr].text.Visible = false
+                drawings[plr].line.Visible = false
+                for _,b in pairs(drawings[plr].bones) do
+                    b[1].Visible = false
+                end
+                continue
+            end
 
-    -- BONES
-    for _,b in pairs(drawings[plr].bones) do
-        b[1].Visible = false
-    end
-
-    continue
-end
-
-
-            -- TEXT
+            -- TEXT ESP + DISTANCE
             local t = drawings[plr].text
             t.Visible = TEXT_ON
-            t.Text = plr.Name
-            t.Size = 16
+            t.Text = string.format("%s [%.0fm]", plr.Name, distance)
+            t.Size = math.clamp(22 - distance/25, 13, 18)
             t.Font = Drawing.Fonts.UI
             t.Center = true
             t.Color = Color3.new(1,1,1)
             t.Position = Vector2.new(pos.X,pos.Y-50)
 
-            -- LINE (TRACER)
+            -- LINE TRACER
             local ln = drawings[plr].line
             ln.Visible = LINE_ON
             ln.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
@@ -116,7 +109,7 @@ end
             ln.Color = Color3.new(1,1,1)
             ln.Thickness = 1
 
-            -- BONES
+            -- BONES ESP
             for _,b in pairs(drawings[plr].bones) do
                 local line,parts = b[1], b[2]
                 local p1 = plr.Character:FindFirstChild(parts[1])
@@ -149,7 +142,9 @@ end)
 UIS.JumpRequest:Connect(function()
     if INFJUMP_ON then
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
     end
 end)
 

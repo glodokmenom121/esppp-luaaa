@@ -1,13 +1,15 @@
 --================================
--- SIMPLE ESP MENU GUI
+-- SERVICES
 --================================
-
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+
 local LP = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
 --================================
--- STATE (TINGGAL DIPAKAI DI ESP)
+-- STATES
 --================================
 ESP_ON = false
 TEXT_ON = false
@@ -18,20 +20,16 @@ INFJUMP_ON = false
 --================================
 -- GUI
 --================================
-local gui = Instance.new("ScreenGui")
-gui.Name = "ESP_MENU_GUI"
+local gui = Instance.new("ScreenGui", LP.PlayerGui)
 gui.ResetOnSpawn = false
-gui.Parent = LP:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.new(0,230,0,300)
-frame.Position = UDim2.new(0,30,0.3,0)
+frame.Position = UDim2.new(0,20,0.3,0)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 frame.Active = true
 frame.Draggable = true
-frame.Visible = true
 
--- Title
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,40)
 title.Text = "ESP MENU"
@@ -40,81 +38,122 @@ title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
 
---================================
--- BUTTON CREATOR
---================================
-local function createButton(text, y, callback)
-    local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(1,-20,0,35)
-    btn.Position = UDim2.new(0,10,0,y)
-    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 13
-    btn.Text = text
-    btn.AutoButtonColor = false
+local function button(text, y, cb)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(1,-20,0,35)
+    b.Position = UDim2.new(0,10,0,y)
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Text = text
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 13
 
-    btn.MouseButton1Click:Connect(function()
-        callback(btn)
+    b.MouseButton1Click:Connect(function()
+        cb(b)
     end)
 end
 
---================================
--- BUTTONS
---================================
-createButton("ESP : OFF", 50, function(b)
+button("ESP : OFF",50,function(b)
     ESP_ON = not ESP_ON
-    b.Text = "ESP : " .. (ESP_ON and "ON" or "OFF")
+    b.Text = "ESP : "..(ESP_ON and "ON" or "OFF")
 end)
 
-createButton("NAME + DIST : OFF", 90, function(b)
+button("NAME + DIST : OFF",90,function(b)
     TEXT_ON = not TEXT_ON
-    b.Text = "NAME + DIST : " .. (TEXT_ON and "ON" or "OFF")
+    b.Text = "NAME + DIST : "..(TEXT_ON and "ON" or "OFF")
 end)
 
-createButton("LINE : OFF", 130, function(b)
+button("LINE : OFF",130,function(b)
     LINE_ON = not LINE_ON
-    b.Text = "LINE : " .. (LINE_ON and "ON" or "OFF")
+    b.Text = "LINE : "..(LINE_ON and "ON" or "OFF")
 end)
 
-createButton("BONES : OFF", 170, function(b)
+button("BONES : OFF",170,function(b)
     BONES_ON = not BONES_ON
-    b.Text = "BONES : " .. (BONES_ON and "ON" or "OFF")
+    b.Text = "BONES : "..(BONES_ON and "ON" or "OFF")
 end)
 
-createButton("INF JUMP : OFF", 210, function(b)
+button("INF JUMP : OFF",210,function(b)
     INFJUMP_ON = not INFJUMP_ON
-    b.Text = "INF JUMP : " .. (INFJUMP_ON and "ON" or "OFF")
+    b.Text = "INF JUMP : "..(INFJUMP_ON and "ON" or "OFF")
 end)
 
--- INFO
-local info = Instance.new("TextLabel", frame)
-info.Size = UDim2.new(1,0,0,30)
-info.Position = UDim2.new(0,0,1,-30)
-info.BackgroundTransparency = 1
-info.Text = "[ + ] Hide / Show Menu"
-info.TextColor3 = Color3.fromRGB(180,180,180)
-info.Font = Enum.Font.Gotham
-info.TextSize = 11
-
---================================
--- TOGGLE GUI WITH +
---================================
-UIS.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.Equals then -- tombol +
+UIS.InputBegan:Connect(function(i,g)
+    if g then return end
+    if i.KeyCode == Enum.KeyCode.Equals then
         frame.Visible = not frame.Visible
     end
 end)
 
 --================================
--- INFINITE JUMP (SPASI)
+-- INFINITE JUMP
 --================================
 UIS.JumpRequest:Connect(function()
     if INFJUMP_ON then
-        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if h then
+            h:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+--================================
+-- DRAWING ESP
+--================================
+local drawings = {}
+
+local function clear(plr)
+    if drawings[plr] then
+        for _,v in pairs(drawings[plr]) do
+            v:Remove()
+        end
+        drawings[plr] = nil
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LP then
+            local char = plr.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+            if not ESP_ON or not hrp or not hum or hum.Health <= 0 then
+                clear(plr)
+                continue
+            end
+
+            local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
+            if not onscreen then
+                clear(plr)
+                continue
+            end
+
+            drawings[plr] = drawings[plr] or {}
+
+            -- NAME + DIST
+            if TEXT_ON then
+                local t = drawings[plr].text or Drawing.new("Text")
+                t.Text = plr.Name.." ["..math.floor((Camera.CFrame.Position-hrp.Position).Magnitude).."]"
+                t.Size = 14
+                t.Center = true
+                t.Outline = true
+                t.Color = Color3.new(1,1,1)
+                t.Position = Vector2.new(pos.X,pos.Y-30)
+                t.Visible = true
+                drawings[plr].text = t
+            end
+
+            -- LINE
+            if LINE_ON then
+                local l = drawings[plr].line or Drawing.new("Line")
+                l.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
+                l.To = Vector2.new(pos.X,pos.Y)
+                l.Color = Color3.new(1,1,1)
+                l.Thickness = 1
+                l.Visible = true
+                drawings[plr].line = l
+            end
         end
     end
 end)

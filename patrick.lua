@@ -113,7 +113,7 @@ end
             ln.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
             ln.To = Vector2.new(pos.X,pos.Y)
             ln.Color = Color3.new(1,1,1)
-            ln.Thickness = 2
+            ln.Thickness = 1
 
             -- BONES
             for _,b in pairs(drawings[plr].bones) do

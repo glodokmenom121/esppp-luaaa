@@ -1,198 +1,171 @@
--- patrickkprojeck FINAL FIXED (LINE + BONES)
-
+--================================
+-- SERVICES
+--================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
+local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
 
--- ================= GUI =================
-local gui = Instance.new("ScreenGui")
-gui.Name = "patrickkprojeck"
-gui.ResetOnSpawn = false
-pcall(function() gui.Parent = gethui() end)
-if not gui.Parent then gui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+--================================
+-- FLAGS
+--================================
+local ESP_ON = false
+local TEXT_ON = false
+local LINE_ON = false
+local BONES_ON = false
+local FLY_ON = false
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,260,0,260)
-frame.Position = UDim2.new(0,50,0.3,0)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
+--================================
+-- ESP STORAGE (PENTING)
+--================================
+local ESPObjects = {}
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,40)
-title.BackgroundTransparency = 1
-title.Text = "patrickkprojeck"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 20
-
-local function btn(text,y)
-    local b = Instance.new("TextButton", frame)
-    b.Size = UDim2.new(1,-20,0,40)
-    b.Position = UDim2.new(0,10,0,y)
-    b.Text = text
-    b.Font = Enum.Font.SourceSansBold
-    b.TextSize = 16
-    b.TextColor3 = Color3.new(1,1,1)
-    b.BackgroundColor3 = Color3.fromRGB(45,45,45)
-    return b
-end
-
-local espBtn   = btn("ESP : OFF",50)
-local textBtn  = btn("TEXT : ON",100)
-local lineBtn  = btn("LINE : OFF",150)
-local boneBtn  = btn("BONES : OFF",200)
-
--- ================= SETTINGS =================
-local ESP, TEXT, LINE, BONES = false, true, false, false
-local drawings = {}
-
--- ================= CLEAN =================
-local function clear(plr)
-    if drawings[plr] then
-        for _,d in pairs(drawings[plr]) do d:Remove() end
-        drawings[plr] = nil
+local function ClearESP()
+    for _,v in pairs(ESPObjects) do
+        if v and v.Remove then
+            v:Remove()
+        end
     end
+    table.clear(ESPObjects)
 end
 
-Players.PlayerRemoving:Connect(clear)
-
--- ================= CREATE =================
-local function create(plr)
-    drawings[plr] = {
-        text = Drawing.new("Text"),
-        line = Drawing.new("Line"),
-        bones = {}
-    }
-
-    drawings[plr].text.Center = true
-    drawings[plr].text.Outline = true
-    drawings[plr].text.Size = 14
-end
-
--- ================= BONE MAKER =================
-local function boneLine()
+--================================
+-- CREATE DRAWING
+--================================
+local function NewLine(thick)
     local l = Drawing.new("Line")
-    l.Thickness = 2
+    l.Visible = false
+    l.Thickness = thick or 2
     l.Color = Color3.new(1,1,1)
+    table.insert(ESPObjects, l)
     return l
 end
 
--- ================= ESP LOOP =================
+local function NewText()
+    local t = Drawing.new("Text")
+    t.Size = 14
+    t.Center = true
+    t.Outline = true
+    t.Color = Color3.new(1,1,1)
+    t.Visible = false
+    table.insert(ESPObjects, t)
+    return t
+end
+
+--================================
+-- BONES CONNECTIONS
+--================================
+local BonePairs = {
+    {"Head","UpperTorso"},
+    {"UpperTorso","LowerTorso"},
+    {"UpperTorso","LeftUpperArm"},
+    {"LeftUpperArm","LeftLowerArm"},
+    {"UpperTorso","RightUpperArm"},
+    {"RightUpperArm","RightLowerArm"},
+    {"LowerTorso","LeftUpperLeg"},
+    {"LeftUpperLeg","LeftLowerLeg"},
+    {"LowerTorso","RightUpperLeg"},
+    {"RightUpperLeg","RightLowerLeg"},
+}
+
+--================================
+-- ESP LOOP
+--================================
 RunService.RenderStepped:Connect(function()
+    if not (ESP_ON or TEXT_ON or LINE_ON or BONES_ON) then return end
+
     for _,plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            if not ESP then clear(plr) continue end
-            if not drawings[plr] then create(plr) end
-
             local char = plr.Character
             local hrp = char.HumanoidRootPart
-            local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
+            local head = char:FindFirstChild("Head")
+
+            local hrpPos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
             if not onscreen then continue end
 
-            local dist = math.floor((hrp.Position - Camera.CFrame.Position).Magnitude)
+            -- TEXT ESP
+            if TEXT_ON and head then
+                local txt = NewText()
+                txt.Text = plr.Name
+                local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0,0.5,0))
+                txt.Position = Vector2.new(headPos.X, headPos.Y)
+                txt.Visible = true
+            end
 
-            -- TEXT
-            local txt = drawings[plr].text
-            txt.Visible = TEXT
-            txt.Text = plr.Name.." ["..dist.."m]"
-            txt.Position = Vector2.new(pos.X, pos.Y - 50)
-            txt.Color = Color3.new(1,1,1)
+            -- LINE / TRACER
+            if LINE_ON then
+                local ln = NewLine(2.5)
+                ln.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                ln.To = Vector2.new(hrpPos.X, hrpPos.Y)
+                ln.Visible = true
+            end
 
-            -- LINE TRACER
-            local ln = drawings[plr].line
-            ln.Visible = LINE
-            ln.Thickness = 2
-            ln.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-            ln.To = Vector2.new(pos.X, pos.Y)
-            ln.Color = Color3.new(1,1,1)
-
-            -- BONES
-            if BONES then
-                local function draw(a,b)
-                    local A,onA = Camera:WorldToViewportPoint(a.Position)
-                    local B,onB = Camera:WorldToViewportPoint(b.Position)
-                    if onA and onB then
-                        local l = boneLine()
-                        l.From = Vector2.new(A.X,A.Y)
-                        l.To   = Vector2.new(B.X,B.Y)
-                        table.insert(drawings[plr].bones,l)
+            -- BONES ESP
+            if BONES_ON then
+                for _,pair in pairs(BonePairs) do
+                    local p1 = char:FindFirstChild(pair[1])
+                    local p2 = char:FindFirstChild(pair[2])
+                    if p1 and p2 then
+                        local a, on1 = Camera:WorldToViewportPoint(p1.Position)
+                        local b, on2 = Camera:WorldToViewportPoint(p2.Position)
+                        if on1 and on2 then
+                            local bone = NewLine(2)
+                            bone.From = Vector2.new(a.X,a.Y)
+                            bone.To = Vector2.new(b.X,b.Y)
+                            bone.Visible = true
+                        end
                     end
                 end
-
-                for _,l in pairs(drawings[plr].bones) do l:Remove() end
-                drawings[plr].bones = {}
-
-                if char:FindFirstChild("Head") then
-                    draw(char.Head, hrp)
-                end
-                if char:FindFirstChild("LeftHand") then
-                    draw(char.LeftHand, hrp)
-                end
-                if char:FindFirstChild("RightHand") then
-                    draw(char.RightHand, hrp)
-                end
-                if char:FindFirstChild("LeftFoot") then
-                    draw(char.LeftFoot, hrp)
-                end
-                if char:FindFirstChild("RightFoot") then
-                    draw(char.RightFoot, hrp)
-                end
-            else
-                for _,l in pairs(drawings[plr].bones) do l:Remove() end
-                drawings[plr].bones = {}
             end
-        else
-            clear(plr)
         end
     end
 end)
 
--- ================= BUTTON =================
-espBtn.MouseButton1Click:Connect(function()
-    ESP = not ESP
-    espBtn.Text = "ESP : "..(ESP and "ON" or "OFF")
+--================================
+-- AUTO CLEAR SAAT OFF
+--================================
+RunService.RenderStepped:Connect(function()
+    if not (ESP_ON or TEXT_ON or LINE_ON or BONES_ON) then
+        ClearESP()
+    end
 end)
 
-textBtn.MouseButton1Click:Connect(function()
-    TEXT = not TEXT
-    textBtn.Text = "TEXT : "..(TEXT and "ON" or "OFF")
-end)
+--================================
+-- FLY (TAHAN SPASI MELAYANG)
+--================================
+local BodyVelocity
+local flying = false
 
-lineBtn.MouseButton1Click:Connect(function()
-    LINE = not LINE
-    lineBtn.Text = "LINE : "..(LINE and "ON" or "OFF")
-end)
-
-boneBtn.MouseButton1Click:Connect(function()
-    BONES = not BONES
-    boneBtn.Text = "BONES : "..(BONES and "ON" or "OFF")
-end)
-
--- ================= OPEN / CLOSE (+) =================
-UserInputService.InputBegan:Connect(function(i,gp)
+UIS.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if i.KeyCode == Enum.KeyCode.Equals then
-        frame.Visible = not frame.Visible
-    end
-end)
-
-print("patrickkprojeck loaded | LINE + BONES OK")
-
--- ================= INFINITE JUMP =================
-local UIS = game:GetService("UserInputService")
-local Player = game:GetService("Players").LocalPlayer
-
-_G.InfiniteJump = true
-
-UIS.JumpRequest:Connect(function()
-    if _G.InfiniteJump then
-        local char = Player.Character
-        if char and char:FindFirstChildOfClass("Humanoid") then
-            char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+    if input.KeyCode == Enum.KeyCode.Space and FLY_ON then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            flying = true
+            BodyVelocity = Instance.new("BodyVelocity")
+            BodyVelocity.MaxForce = Vector3.new(0,math.huge,0)
+            BodyVelocity.Velocity = Vector3.new(0,50,0)
+            BodyVelocity.Parent = char.HumanoidRootPart
         end
     end
 end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        flying = false
+        if BodyVelocity then
+            BodyVelocity:Destroy()
+            BodyVelocity = nil
+        end
+    end
+end)
+
+--================================
+-- TOGGLE FUNCTIONS (PAKAI DI MENU KAMU)
+--================================
+_G.ToggleESP = function(v) ESP_ON = v if not v then ClearESP() end end
+_G.ToggleText = function(v) TEXT_ON = v if not v then ClearESP() end end
+_G.ToggleLine = function(v) LINE_ON = v if not v then ClearESP() end end
+_G.ToggleBones = function(v) BONES_ON = v if not v then ClearESP() end end
+_G.ToggleFly = function(v) FLY_ON = v end

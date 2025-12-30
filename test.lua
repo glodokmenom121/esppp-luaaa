@@ -1,61 +1,125 @@
--- patrickkprojeck (GUI TEST FIX)
+--==============================
+-- BALL HITBOX GUI (RACKET RIVALS)
+--==============================
 
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local LP = Players.LocalPlayer
 
--- ===== GUI SAFE PARENT =====
-local gui = Instance.new("ScreenGui")
-gui.Name = "patrickkprojeck"
-gui.ResetOnSpawn = false
+--==============================
+-- STATE
+--==============================
+local HITBOX_ON = false
+local HITBOX_SIZE = 8
+local GUI_VISIBLE = true
+local ballHitbox = nil
 
-pcall(function()
-    gui.Parent = gethui()
-end)
-
-if not gui.Parent then
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+--==============================
+-- FIND BALL
+--==============================
+local function findBall()
+    for _,v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart")
+        and string.find(v.Name:lower(),"ball") then
+            return v
+        end
+    end
 end
 
--- ===== FRAME =====
-local frame = Instance.new("Frame")
-frame.Parent = gui
-frame.Size = UDim2.new(0, 260, 0, 180)
-frame.Position = UDim2.new(0, 50, 0.3, 0)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.BorderSizePixel = 0
-frame.Visible = true
-frame.Active = true
-frame.Draggable = true
+--==============================
+-- APPLY HITBOX
+--==============================
+local function applyHitbox(ball)
+    if not ball then return end
 
--- ===== TITLE =====
-local title = Instance.new("TextLabel")
-title.Parent = frame
-title.Size = UDim2.new(1,0,0,40)
-title.BackgroundTransparency = 1
-title.Text = "patrickkprojeck"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 20
+    if not ballHitbox then
+        ballHitbox = Instance.new("BoxHandleAdornment")
+        ballHitbox.Name = "BallHitbox"
+        ballHitbox.Adornee = ball
+        ballHitbox.AlwaysOnTop = true
+        ballHitbox.ZIndex = 10
+        ballHitbox.Transparency = 0.6
+        ballHitbox.Color3 = Color3.fromRGB(0,255,0)
+        ballHitbox.Parent = ball
+    end
 
--- ===== INFO TEXT =====
-local info = Instance.new("TextLabel")
-info.Parent = frame
-info.Position = UDim2.new(0,0,0,60)
-info.Size = UDim2.new(1,0,0,40)
-info.BackgroundTransparency = 1
-info.Text = "MENU BERHASIL MUNCUL\nTekan '=' untuk hide/show"
-info.TextColor3 = Color3.fromRGB(200,200,200)
-info.Font = Enum.Font.SourceSans
-info.TextSize = 14
-info.TextWrapped = true
+    ballHitbox.Size = Vector3.new(HITBOX_SIZE, HITBOX_SIZE, HITBOX_SIZE)
+    ballHitbox.Visible = HITBOX_ON
+end
 
--- ===== OPEN / CLOSE WITH = =====
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.Equals then
-        frame.Visible = not frame.Visible
+--==============================
+-- UPDATE LOOP
+--==============================
+RunService.RenderStepped:Connect(function()
+    if not HITBOX_ON then
+        if ballHitbox then
+            ballHitbox.Visible = false
+        end
+        return
+    end
+
+    local ball = findBall()
+    if ball then
+        applyHitbox(ball)
     end
 end)
 
-print("patrickkprojeck GUI loaded successfully")
+--==============================
+-- GUI
+--==============================
+local gui = Instance.new("ScreenGui", LP.PlayerGui)
+gui.Name = "BallHitboxGUI"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.fromOffset(220,160)
+frame.Position = UDim2.fromScale(0.05,0.35)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "BALL HITBOX"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 18
+
+local function makeBtn(text,y,callback)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(1,-20,0,30)
+    b.Position = UDim2.new(0,10,0,y)
+    b.Text = text
+    b.Font = Enum.Font.SourceSans
+    b.TextSize = 16
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.MouseButton1Click:Connect(callback)
+    return b
+end
+
+local toggleBtn = makeBtn("HITBOX : OFF",40,function()
+    HITBOX_ON = not HITBOX_ON
+    toggleBtn.Text = "HITBOX : "..(HITBOX_ON and "ON" or "OFF")
+end)
+
+local plusBtn = makeBtn("SIZE +",80,function()
+    HITBOX_SIZE += 2
+end)
+
+local minusBtn = makeBtn("SIZE -",120,function()
+    HITBOX_SIZE = math.max(4, HITBOX_SIZE - 2)
+end)
+
+--==============================
+-- HIDE / SHOW GUI (=)
+--==============================
+UIS.InputBegan:Connect(function(i,gp)
+    if gp then return end
+    if i.KeyCode == Enum.KeyCode.Equals then
+        GUI_VISIBLE = not GUI_VISIBLE
+        frame.Visible = GUI_VISIBLE
+    end
+end)

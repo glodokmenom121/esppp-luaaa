@@ -1,5 +1,5 @@
 --================================
--- patrickkkprojeck FULL FINAL (VISIBILITY FIX 100%)
+-- patrickkkprojeck FULL FINAL (ESP FIX CAMERA)
 --================================
 
 -- SERVICES
@@ -21,46 +21,37 @@ local INFJUMP_ON = false
 local drawings = {}
 
 --================================
--- STRICT VISIBILITY CHECK (ANTI GHOST ESP)
+-- VISIBILITY CHECK (FINAL FIX)
 --================================
 local function getScreenPos(worldPos)
-    local cam = Camera
-    local camCF = cam.CFrame
+    local camCF = Camera.CFrame
     local dir = worldPos - camCF.Position
 
-    -- terlalu dekat / error
     if dir.Magnitude < 1 then
         return false
     end
 
-    -- ❌ BELAKANG / SAMPING KAMERA (INI FIX UTAMA)
+    -- 🔴 BENAR-BENAR DEPAN KAMERA
     if camCF.LookVector:Dot(dir.Unit) <= 0.25 then
         return false
     end
 
-    local pos, onScreen = cam:WorldToViewportPoint(worldPos)
-    if not onScreen then
+    local pos, onScreen = Camera:WorldToViewportPoint(worldPos)
+    if not onScreen or pos.Z <= 0 then
         return false
     end
 
-    -- depth check
-    if pos.Z <= 0 then
-        return false
-    end
-
-    -- out of screen
     if pos.X < 0 or pos.Y < 0
-    or pos.X > cam.ViewportSize.X
-    or pos.Y > cam.ViewportSize.Y then
+    or pos.X > Camera.ViewportSize.X
+    or pos.Y > Camera.ViewportSize.Y then
         return false
     end
 
     return true, Vector2.new(pos.X, pos.Y)
 end
 
-
 --================================
--- CLEAR ESP
+-- CLEAN
 --================================
 local function clear(plr)
     if drawings[plr] then
@@ -78,7 +69,7 @@ local function clear(plr)
 end
 
 --================================
--- CREATE DRAWINGS
+-- CREATE
 --================================
 local function create(plr)
     drawings[plr] = {
@@ -100,25 +91,30 @@ local function create(plr)
         {"RightUpperLeg","RightLowerLeg"}
     }) do
         local l = Drawing.new("Line")
-        l.Thickness = 3
         l.Color = Color3.fromRGB(255,0,0)
+        l.Thickness = 3
         table.insert(drawings[plr].bones,{l,bone})
     end
 end
 
 --================================
--- RENDER LOOP (NO STUCK LINE / TEXT)
+-- RENDER LOOP (FIXED)
 --================================
 RunService.RenderStepped:Connect(function()
     for _,plr in ipairs(Players:GetPlayers()) do
 
-        -- ❌ HARD BLOCK LOCAL PLAYER
+        -- ❌ BLOK LOCAL PLAYER TOTAL
         if plr == LP then
             clear(plr)
             continue
         end
 
-        if not ESP_ON or not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+        if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then
+            clear(plr)
+            continue
+        end
+
+        if not ESP_ON then
             clear(plr)
             continue
         end
@@ -128,10 +124,10 @@ RunService.RenderStepped:Connect(function()
         end
 
         local hrp = plr.Character.HumanoidRootPart
-        local visible, screenPos = getScreenPos(hrp.Position)
+        local ok, pos = getScreenPos(hrp.Position)
 
-        -- 🔴 OFFSCREEN → SEMUA MATI TOTAL
-        if not visible then
+        -- ❌ TIDAK TERLIHAT → SEMUA HILANG
+        if not ok then
             drawings[plr].text.Visible = false
             drawings[plr].line.Visible = false
             for _,b in pairs(drawings[plr].bones) do
@@ -146,16 +142,16 @@ RunService.RenderStepped:Connect(function()
         t.Text = plr.Name
         t.Size = 18
         t.Font = Drawing.Fonts.UI
-        t.Center = true
         t.Outline = true
+        t.Center = true
         t.Color = Color3.new(1,1,1)
-        t.Position = screenPos + Vector2.new(0,-45)
+        t.Position = pos + Vector2.new(0,-45)
 
-        -- LINE (TRACER FIXED)
+        -- LINE (TRACER)
         local ln = drawings[plr].line
         ln.Visible = LINE_ON
         ln.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-        ln.To = screenPos
+        ln.To = pos
         ln.Color = Color3.new(1,1,1)
         ln.Thickness = 1
 
@@ -166,12 +162,12 @@ RunService.RenderStepped:Connect(function()
             local p2 = plr.Character:FindFirstChild(parts[2])
 
             if BONES_ON and p1 and p2 then
-                local v1,s1 = getScreenPos(p1.Position)
-                local v2,s2 = getScreenPos(p2.Position)
-                if v1 and v2 then
+                local ok1,v1 = getScreenPos(p1.Position)
+                local ok2,v2 = getScreenPos(p2.Position)
+                if ok1 and ok2 then
                     line.Visible = true
-                    line.From = s1
-                    line.To = s2
+                    line.From = v1
+                    line.To = v2
                 else
                     line.Visible = false
                 end
@@ -183,7 +179,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --================================
--- INFINITE JUMP
+-- INF JUMP
 --================================
 UIS.JumpRequest:Connect(function()
     if INFJUMP_ON then

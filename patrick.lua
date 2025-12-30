@@ -103,6 +103,7 @@ end
             t.Visible = TEXT_ON
             t.Text = plr.Name
             t.Size = 16
+            t.Font = Drawing.Fonts.UI
             t.Center = true
             t.Color = Color3.new(1,1,1)
             t.Position = Vector2.new(pos.X,pos.Y-50)

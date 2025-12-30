@@ -24,26 +24,40 @@ local drawings = {}
 -- STRICT VISIBILITY CHECK (ANTI GHOST ESP)
 --================================
 local function getScreenPos(worldPos)
-    local pos, onScreen = Camera:WorldToViewportPoint(worldPos)
+    local cam = Camera
+    local camCF = cam.CFrame
+    local dir = worldPos - camCF.Position
 
+    -- terlalu dekat / error
+    if dir.Magnitude < 1 then
+        return false
+    end
+
+    -- ❌ BELAKANG / SAMPING KAMERA (INI FIX UTAMA)
+    if camCF.LookVector:Dot(dir.Unit) <= 0.25 then
+        return false
+    end
+
+    local pos, onScreen = cam:WorldToViewportPoint(worldPos)
     if not onScreen then
         return false
     end
 
-    -- belakang kamera
+    -- depth check
     if pos.Z <= 0 then
         return false
     end
 
-    -- keluar layar
+    -- out of screen
     if pos.X < 0 or pos.Y < 0
-    or pos.X > Camera.ViewportSize.X
-    or pos.Y > Camera.ViewportSize.Y then
+    or pos.X > cam.ViewportSize.X
+    or pos.Y > cam.ViewportSize.Y then
         return false
     end
 
     return true, Vector2.new(pos.X, pos.Y)
 end
+
 
 --================================
 -- CLEAR ESP

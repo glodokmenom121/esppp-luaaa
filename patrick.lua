@@ -1,150 +1,174 @@
--- ESP MENU + FLY (INFINITE JUMP HOLD) + TOGGLE +
+-- patrickkprojeck
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- GUI
-local gui = Instance.new("ScreenGui")
-gui.Name = "PatrickProjectMenu"
-gui.Parent = game.CoreGui
+-- ================= GUI =================
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "patrickkprojeck"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(220, 170)
-frame.Position = UDim2.fromOffset(20, 20)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.Size = UDim2.new(0, 260, 0, 300)
+frame.Position = UDim2.new(0, 30, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Visible = true
 
-Instance.new("UICorner", frame)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,40)
+title.Text = "patrickkprojeck"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
 
--- ESP BUTTON
-local espBtn = Instance.new("TextButton", frame)
-espBtn.Size = UDim2.fromOffset(200, 40)
-espBtn.Position = UDim2.fromOffset(10, 10)
-espBtn.Text = "ESP : OFF"
-espBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-espBtn.TextColor3 = Color3.new(1,1,1)
-
--- FLY BUTTON
-local flyBtn = Instance.new("TextButton", frame)
-flyBtn.Size = UDim2.fromOffset(200, 40)
-flyBtn.Position = UDim2.fromOffset(10, 60)
-flyBtn.Text = "FLY : OFF"
-flyBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-flyBtn.TextColor3 = Color3.new(1,1,1)
-
--- INFO TEXT
-local info = Instance.new("TextLabel", frame)
-info.Size = UDim2.fromOffset(200, 30)
-info.Position = UDim2.fromOffset(10, 115)
-info.Text = "Tahan SPACE untuk terbang"
-info.TextColor3 = Color3.new(1,1,1)
-info.BackgroundTransparency = 1
-info.TextScaled = true
-
--- STATE
-local espOn = false
-local flyOn = false
-local holdingSpace = false
-local espObjects = {}
-
--- ESP FUNCTION
-local function createESP(player)
-	if player == LocalPlayer then return end
-
-	local box = Drawing.new("Square")
-	box.Thickness = 1
-	box.Color = Color3.new(1,0,0)
-	box.Filled = false
-	box.Visible = false
-
-	local name = Drawing.new("Text")
-	name.Color = Color3.new(1,1,1)
-	name.Size = 14
-	name.Center = true
-	name.Outline = true
-	name.Visible = false
-
-	espObjects[player] = {box = box, name = name}
+-- ================= BUTTON CREATOR =================
+local function makeButton(text, posY)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1,-20,0,40)
+    btn.Position = UDim2.new(0,10,0,posY)
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    return btn
 end
 
-local function removeESP(player)
-	if espObjects[player] then
-		for _,v in pairs(espObjects[player]) do
-			v:Remove()
-		end
-		espObjects[player] = nil
-	end
+local espBtn = makeButton("ESP : OFF", 50)
+local boxBtn = makeButton("BOX : ON", 100)
+local lineBtn = makeButton("LINE : ON", 150)
+local textBtn = makeButton("TEXT : ON", 200)
+local flyBtn = makeButton("FLY : OFF", 250)
+
+-- ================= SETTINGS =================
+local ESP = false
+local BOX = true
+local LINE = true
+local TEXT = true
+local FLY = false
+
+local drawings = {}
+
+-- ================= ESP FUNCTIONS =================
+local function clearESP(plr)
+    if drawings[plr] then
+        for _,d in pairs(drawings[plr]) do
+            d:Remove()
+        end
+        drawings[plr] = nil
+    end
 end
 
-for _,p in pairs(Players:GetPlayers()) do
-	createESP(p)
+local function createESP(plr)
+    if plr == LocalPlayer then return end
+    drawings[plr] = {
+        box = Drawing.new("Square"),
+        line = Drawing.new("Line"),
+        text = Drawing.new("Text")
+    }
 end
-Players.PlayerAdded:Connect(createESP)
-Players.PlayerRemoving:Connect(removeESP)
 
--- ESP RENDER
 RunService.RenderStepped:Connect(function()
-	for player,data in pairs(espObjects) do
-		local char = player.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if ESP then
+                if not drawings[plr] then createESP(plr) end
+                local hrp = plr.Character.HumanoidRootPart
+                local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
 
-		if espOn and hrp then
-			local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
-			if onscreen then
-				data.box.Visible = true
-				data.name.Visible = true
-				data.box.Size = Vector2.new(50, 80)
-				data.box.Position = Vector2.new(pos.X - 25, pos.Y - 40)
-				data.name.Text = player.Name
-				data.name.Position = Vector2.new(pos.X, pos.Y - 55)
-			else
-				data.box.Visible = false
-				data.name.Visible = false
-			end
-		else
-			data.box.Visible = false
-			data.name.Visible = false
-		end
-	end
+                if onscreen then
+                    local dist = math.floor((hrp.Position - Camera.CFrame.Position).Magnitude)
+
+                    -- BOX
+                    local box = drawings[plr].box
+                    box.Visible = BOX
+                    box.Size = Vector2.new(60,100)
+                    box.Position = Vector2.new(pos.X-30, pos.Y-50)
+                    box.Color = Color3.new(1,1,1)
+                    box.Thickness = 1
+
+                    -- LINE
+                    local line = drawings[plr].line
+                    line.Visible = LINE
+                    line.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                    line.To = Vector2.new(pos.X, pos.Y)
+                    line.Color = Color3.new(1,1,1)
+                    line.Thickness = 1
+
+                    -- TEXT
+                    local text = drawings[plr].text
+                    text.Visible = TEXT
+                    text.Text = plr.Name.." ["..dist.."m]"
+                    text.Position = Vector2.new(pos.X, pos.Y-60)
+                    text.Size = 16
+                    text.Center = true
+                    text.Color = Color3.new(1,1,1)
+                end
+            else
+                clearESP(plr)
+            end
+        end
+    end
 end)
 
--- ESP TOGGLE
+-- ================= BUTTON ACTION =================
 espBtn.MouseButton1Click:Connect(function()
-	espOn = not espOn
-	espBtn.Text = espOn and "ESP : ON" or "ESP : OFF"
+    ESP = not ESP
+    espBtn.Text = "ESP : "..(ESP and "ON" or "OFF")
 end)
 
--- FLY TOGGLE
-flyBtn.MouseButton1Click:Connect(function()
-	flyOn = not flyOn
-	flyBtn.Text = flyOn and "FLY : ON" or "FLY : OFF"
+boxBtn.MouseButton1Click:Connect(function()
+    BOX = not BOX
+    boxBtn.Text = "BOX : "..(BOX and "ON" or "OFF")
 end)
 
--- INPUT (SPACE HOLD)
-UIS.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.Space then
-		holdingSpace = true
-	end
-	if input.KeyCode == Enum.KeyCode.Equals then
-		gui.Enabled = not gui.Enabled
-	end
+lineBtn.MouseButton1Click:Connect(function()
+    LINE = not LINE
+    lineBtn.Text = "LINE : "..(LINE and "ON" or "OFF")
 end)
 
-UIS.InputEnded:Connect(function(input)
-	if input.KeyCode == Enum.KeyCode.Space then
-		holdingSpace = false
-	end
+textBtn.MouseButton1Click:Connect(function()
+    TEXT = not TEXT
+    textBtn.Text = "TEXT : "..(TEXT and "ON" or "OFF")
 end)
 
--- FLY LOOP
+-- ================= FLY =================
+local bv, bg
 RunService.RenderStepped:Connect(function()
-	if flyOn and holdingSpace then
-		local char = LocalPlayer.Character
-		local hrp = char and char:FindFirstChild("HumanoidRootPart")
-		if hrp then
-			hrp.Velocity = Vector3.new(hrp.Velocity.X, 50, hrp.Velocity.Z)
-		end
-	end
+    if FLY and bv and bg then
+        bg.CFrame = Camera.CFrame
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            bv.Velocity = Camera.CFrame.LookVector * 60
+        else
+            bv.Velocity = Vector3.zero
+        end
+    end
+end)
+
+flyBtn.MouseButton1Click:Connect(function()
+    FLY = not FLY
+    flyBtn.Text = "FLY : "..(FLY and "ON" or "OFF")
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if FLY then
+        bg = Instance.new("BodyGyro", hrp)
+        bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
+        bv = Instance.new("BodyVelocity", hrp)
+        bv.MaxForce = Vector3.new(9e9,9e9,9e9)
+    else
+        if bg then bg:Destroy() end
+        if bv then bv:Destroy() end
+    end
+end)
+
+-- ================= OPEN / CLOSE (+) =================
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.Equals then
+        frame.Visible = not frame.Visible
+    end
 end)

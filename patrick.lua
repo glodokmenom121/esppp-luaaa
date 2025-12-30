@@ -128,7 +128,7 @@ end
                         line.Visible = true
                         line.From = Vector2.new(v1.X,v1.Y)
                         line.To = Vector2.new(v2.X,v2.Y)
-                        line.Color = Color3.new(1,1,1)
+                        line.Color = Color3.fromRGB(0,0,0)
                     else
                         line.Visible = false
                     end

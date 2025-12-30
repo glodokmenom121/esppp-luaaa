@@ -29,24 +29,6 @@ title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
 
--- ================= INFINITE JUMP TOGGLE =================
-local UIS = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-_G.InfJump = false
-
--- fungsi lompat
-UIS.JumpRequest:Connect(function()
-    if _G.InfJump then
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
 local function btn(text,y)
     local b = Instance.new("TextButton", frame)
     b.Size = UDim2.new(1,-20,0,40)
@@ -199,3 +181,18 @@ UserInputService.InputBegan:Connect(function(i,gp)
 end)
 
 print("patrickkprojeck loaded | LINE + BONES OK")
+
+-- ================= INFINITE JUMP =================
+local UIS = game:GetService("UserInputService")
+local Player = game:GetService("Players").LocalPlayer
+
+_G.InfiniteJump = true
+
+UIS.JumpRequest:Connect(function()
+    if _G.InfiniteJump then
+        local char = Player.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)

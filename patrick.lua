@@ -55,7 +55,7 @@ local function create(plr)
         {"RightUpperLeg","RightLowerLeg"}
     }) do
         local l = Drawing.new("Line")
-        l.Thickness = 2
+        l.Thickness = 4
         table.insert(drawings[plr].bones,{l,bone})
     end
 end
@@ -128,7 +128,7 @@ end
                         line.Visible = true
                         line.From = Vector2.new(v1.X,v1.Y)
                         line.To = Vector2.new(v2.X,v2.Y)
-                        line.Color = Color3.fromRGB(0,0,0)
+                        line.Color = Color3.fromRGB(255,0,0)
                     else
                         line.Visible = false
                     end

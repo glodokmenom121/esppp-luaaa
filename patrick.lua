@@ -1,5 +1,5 @@
 --================================
--- patrickkkprojeck FULL FINAL
+-- patrickkkprojeck FULL FINAL FIX
 --================================
 
 -- SERVICES
@@ -21,19 +21,25 @@ local INFJUMP_ON = false
 local drawings = {}
 
 --================================
--- CLEAN PLAYER ESP
+-- CLEAR ESP
 --================================
 local function clear(plr)
     if drawings[plr] then
         for _,d in pairs(drawings[plr]) do
-            pcall(function() d:Remove() end)
+            if typeof(d) == "table" then
+                for _,x in pairs(d) do
+                    pcall(function() x[1]:Remove() end)
+                end
+            else
+                pcall(function() d:Remove() end)
+            end
         end
         drawings[plr] = nil
     end
 end
 
 --================================
--- CREATE DRAWINGS
+-- CREATE ESP
 --================================
 local function create(plr)
     drawings[plr] = {
@@ -61,27 +67,31 @@ local function create(plr)
 end
 
 --================================
--- RENDER LOOP
+-- RENDER
 --================================
 RunService.RenderStepped:Connect(function()
     for _,plr in pairs(Players:GetPlayers()) do
-        if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            if not ESP_ON then
-                clear(plr)
-                continue
-            end
 
+        -- ⛔ jangan ESP diri sendiri
+        if plr == LP then
+            clear(plr)
+            continue
+        end
+
+        if not ESP_ON then
+            clear(plr)
+            continue
+        end
+
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             if not drawings[plr] then
                 create(plr)
             end
 
             local hrp = plr.Character.HumanoidRootPart
-            local pos,vis = Camera:WorldToViewportPoint(hrp.Position)
+            local pos, vis = Camera:WorldToViewportPoint(hrp.Position)
 
-            local myChar = LP.Character
-            local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
-            local distance = myHRP and (myHRP.Position - hrp.Position).Magnitude or 0
-
+            -- ❌ kalau tidak kelihatan kamera
             if not vis then
                 drawings[plr].text.Visible = false
                 drawings[plr].line.Visible = false
@@ -91,25 +101,29 @@ RunService.RenderStepped:Connect(function()
                 continue
             end
 
-            -- TEXT ESP + DISTANCE
+            -- JARAK
+            local dist = math.floor((Camera.CFrame.Position - hrp.Position).Magnitude)
+
+            -- TEXT
             local t = drawings[plr].text
             t.Visible = TEXT_ON
-            t.Text = string.format("%s [%.0fm]", plr.Name, distance)
-            t.Size = math.clamp(22 - distance/25, 13, 18)
+            t.Text = plr.Name .. " ["..dist.."m]"
+            t.Size = 17
             t.Font = Drawing.Fonts.UI
             t.Center = true
+            t.Outline = true -- 🔥 bikin tebel
             t.Color = Color3.new(1,1,1)
-            t.Position = Vector2.new(pos.X,pos.Y-50)
+            t.Position = Vector2.new(pos.X, pos.Y - 55)
 
-            -- LINE TRACER
+            -- TRACER
             local ln = drawings[plr].line
             ln.Visible = LINE_ON
-            ln.From = Vector2.new(Camera.ViewportSize.X/2,Camera.ViewportSize.Y)
-            ln.To = Vector2.new(pos.X,pos.Y)
+            ln.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+            ln.To = Vector2.new(pos.X, pos.Y)
             ln.Color = Color3.new(1,1,1)
             ln.Thickness = 1
 
-            -- BONES ESP
+            -- BONES
             for _,b in pairs(drawings[plr].bones) do
                 local line,parts = b[1], b[2]
                 local p1 = plr.Character:FindFirstChild(parts[1])
@@ -137,7 +151,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 --================================
--- INFINITE JUMP (SPASI)
+-- INFINITE JUMP
 --================================
 UIS.JumpRequest:Connect(function()
     if INFJUMP_ON then

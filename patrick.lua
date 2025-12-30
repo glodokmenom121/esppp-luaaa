@@ -77,7 +77,26 @@ RunService.RenderStepped:Connect(function()
 
             local hrp = plr.Character.HumanoidRootPart
             local pos,vis = Camera:WorldToViewportPoint(hrp.Position)
-            if not vis then continue end
+
+if not vis then
+    -- TEXT
+    if drawings[plr].text then
+        drawings[plr].text.Visible = false
+    end
+
+    -- LINE
+    if drawings[plr].line then
+        drawings[plr].line.Visible = false
+    end
+
+    -- BONES
+    for _,b in pairs(drawings[plr].bones) do
+        b[1].Visible = false
+    end
+
+    continue
+end
+
 
             -- TEXT
             local t = drawings[plr].text

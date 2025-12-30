@@ -1,5 +1,5 @@
 --================================
--- patrickkkprojeck FULL FINAL FIX
+-- patrickkkprojeck FULL FINAL (FIXED)
 --================================
 
 -- SERVICES
@@ -21,14 +21,40 @@ local INFJUMP_ON = false
 local drawings = {}
 
 --================================
--- CLEAR ESP
+-- VISIBILITY CHECK (FIX UTAMA)
+--================================
+local function validESP(worldPos)
+    local camCF = Camera.CFrame
+    local dir = (worldPos - camCF.Position)
+
+    if dir.Magnitude < 1 then return false end
+
+    -- di belakang kamera
+    if camCF.LookVector:Dot(dir.Unit) <= 0 then
+        return false
+    end
+
+    local pos, onScreen = Camera:WorldToViewportPoint(worldPos)
+    if not onScreen then return false end
+
+    if pos.X < 0 or pos.Y < 0
+    or pos.X > Camera.ViewportSize.X
+    or pos.Y > Camera.ViewportSize.Y then
+        return false
+    end
+
+    return true, pos
+end
+
+--================================
+-- CLEAN PLAYER ESP
 --================================
 local function clear(plr)
     if drawings[plr] then
         for _,d in pairs(drawings[plr]) do
             if typeof(d) == "table" then
                 for _,x in pairs(d) do
-                    pcall(function() x[1]:Remove() end)
+                    pcall(function() x:Remove() end)
                 end
             else
                 pcall(function() d:Remove() end)
@@ -39,7 +65,7 @@ local function clear(plr)
 end
 
 --================================
--- CREATE ESP
+-- CREATE DRAWINGS
 --================================
 local function create(plr)
     drawings[plr] = {
@@ -62,37 +88,31 @@ local function create(plr)
     }) do
         local l = Drawing.new("Line")
         l.Thickness = 4
+        l.Color = Color3.fromRGB(255,0,0)
         table.insert(drawings[plr].bones,{l,bone})
     end
 end
 
 --================================
--- RENDER
+-- RENDER LOOP (FIXED)
 --================================
 RunService.RenderStepped:Connect(function()
     for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
 
-        -- ⛔ jangan ESP diri sendiri
-        if plr == LP then
-            clear(plr)
-            continue
-        end
+            if not ESP_ON then
+                clear(plr)
+                continue
+            end
 
-        if not ESP_ON then
-            clear(plr)
-            continue
-        end
-
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
             if not drawings[plr] then
                 create(plr)
             end
 
             local hrp = plr.Character.HumanoidRootPart
-            local pos, vis = Camera:WorldToViewportPoint(hrp.Position)
+            local ok, pos = validESP(hrp.Position)
 
-            -- ❌ kalau tidak kelihatan kamera
-            if not vis then
+            if not ok then
                 drawings[plr].text.Visible = false
                 drawings[plr].line.Visible = false
                 for _,b in pairs(drawings[plr].bones) do
@@ -101,24 +121,21 @@ RunService.RenderStepped:Connect(function()
                 continue
             end
 
-            -- JARAK
-            local dist = math.floor((Camera.CFrame.Position - hrp.Position).Magnitude)
-
-            -- TEXT
+            -- TEXT (lebih tebal dikit)
             local t = drawings[plr].text
             t.Visible = TEXT_ON
-            t.Text = plr.Name .. " ["..dist.."m]"
+            t.Text = plr.Name
             t.Size = 17
             t.Font = Drawing.Fonts.UI
             t.Center = true
-            t.Outline = true -- 🔥 bikin tebel
+            t.Outline = true
             t.Color = Color3.new(1,1,1)
-            t.Position = Vector2.new(pos.X, pos.Y - 55)
+            t.Position = Vector2.new(pos.X, pos.Y - 45)
 
-            -- TRACER
+            -- LINE (TRACER)
             local ln = drawings[plr].line
             ln.Visible = LINE_ON
-            ln.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+            ln.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y - 20)
             ln.To = Vector2.new(pos.X, pos.Y)
             ln.Color = Color3.new(1,1,1)
             ln.Thickness = 1
@@ -130,13 +147,12 @@ RunService.RenderStepped:Connect(function()
                 local p2 = plr.Character:FindFirstChild(parts[2])
 
                 if BONES_ON and p1 and p2 then
-                    local v1,on1 = Camera:WorldToViewportPoint(p1.Position)
-                    local v2,on2 = Camera:WorldToViewportPoint(p2.Position)
-                    if on1 and on2 then
+                    local ok1,v1 = validESP(p1.Position)
+                    local ok2,v2 = validESP(p2.Position)
+                    if ok1 and ok2 then
                         line.Visible = true
                         line.From = Vector2.new(v1.X,v1.Y)
                         line.To = Vector2.new(v2.X,v2.Y)
-                        line.Color = Color3.fromRGB(255,0,0)
                     else
                         line.Visible = false
                     end

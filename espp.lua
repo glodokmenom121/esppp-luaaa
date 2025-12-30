@@ -1,122 +1,99 @@
---// Volleyball Legends Assist Script
---// GUI + Ball Hitbox + Enemy Look Direction
+--// Volleyball Legends - Ball Hitbox ONLY
+--// NO AUTO SWING | NO AUTO CLICK
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
 
--- SETTINGS
-local HitboxEnabled = false
-local HitboxSize = 8
-local DirectionEnabled = false
+local HitboxOn = false
+local HitboxSize = Vector3.new(8,8,8)
 
--- BALL FINDER
+-- FIND BALL
 local function getBall()
-    for _,v in pairs(Workspace:GetDescendants()) do
+    for _,v in pairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") and v.Name:lower():find("ball") then
             return v
         end
     end
 end
 
+-- HITBOX PART
+local hitbox = Instance.new("Part")
+hitbox.Name = "BallHitbox"
+hitbox.Anchored = true
+hitbox.CanCollide = false
+hitbox.Material = Enum.Material.ForceField
+hitbox.Color = Color3.fromRGB(0,170,255)
+hitbox.Transparency = 1
+hitbox.Parent = workspace
+
 -- GUI
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "VolleyLegendGUI"
+gui.Name = "BallHitboxGUI"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromScale(0.18,0.25)
-frame.Position = UDim2.fromScale(0.05,0.3)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.Size = UDim2.fromScale(0.22,0.26)
+frame.Position = UDim2.fromScale(0.05,0.35)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 frame.Active = true
 frame.Draggable = true
 
-local title = Instance.new("TextButton", frame)
-title.Size = UDim2.fromScale(1,0.18)
-title.Text = "+"
-title.TextSize = 24
-title.BackgroundColor3 = Color3.fromRGB(40,40,40)
-title.TextColor3 = Color3.new(1,1,1)
+local toggleMenu = Instance.new("TextButton", frame)
+toggleMenu.Size = UDim2.fromScale(1,0.2)
+toggleMenu.Text = "+  HITBOX MENU"
+toggleMenu.TextScaled = true
+toggleMenu.BackgroundColor3 = Color3.fromRGB(35,35,35)
+toggleMenu.TextColor3 = Color3.new(1,1,1)
 
 local content = Instance.new("Frame", frame)
-content.Position = UDim2.fromScale(0,0.18)
-content.Size = UDim2.fromScale(1,0.82)
+content.Position = UDim2.fromScale(0,0.2)
+content.Size = UDim2.fromScale(1,0.8)
 content.BackgroundTransparency = 1
+content.Visible = false
 
-title.MouseButton1Click:Connect(function()
+toggleMenu.MouseButton1Click:Connect(function()
     content.Visible = not content.Visible
 end)
 
--- BUTTON CREATOR
-local function createButton(text, y, callback)
+local function button(text,y,callback)
     local b = Instance.new("TextButton", content)
     b.Size = UDim2.fromScale(0.9,0.18)
     b.Position = UDim2.fromScale(0.05,y)
     b.Text = text
-    b.TextColor3 = Color3.new(1,1,1)
-    b.BackgroundColor3 = Color3.fromRGB(50,50,50)
     b.TextScaled = true
-    b.MouseButton1Click:Connect(callback)
+    b.BackgroundColor3 = Color3.fromRGB(55,55,55)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.MouseButton1Click:Connect(function()
+        callback(b)
+    end)
 end
 
--- BUTTONS
-createButton("Ball Hitbox : OFF", 0.05, function(btn)
-    HitboxEnabled = not HitboxEnabled
-    btn.Text = "Ball Hitbox : "..(HitboxEnabled and "ON" or "OFF")
+button("Hitbox : OFF",0.05,function(b)
+    HitboxOn = not HitboxOn
+    b.Text = "Hitbox : "..(HitboxOn and "ON" or "OFF")
 end)
 
-createButton("Enemy Direction : OFF", 0.3, function(btn)
-    DirectionEnabled = not DirectionEnabled
-    btn.Text = "Enemy Direction : "..(DirectionEnabled and "ON" or "OFF")
+button("Size +",0.3,function()
+    HitboxSize += Vector3.new(2,2,2)
 end)
 
-createButton("Hitbox +", 0.55, function()
-    HitboxSize += 2
+button("Size -",0.55,function()
+    HitboxSize = Vector3.new(
+        math.max(4,HitboxSize.X-2),
+        math.max(4,HitboxSize.Y-2),
+        math.max(4,HitboxSize.Z-2)
+    )
 end)
 
-createButton("Hitbox -", 0.75, function()
-    HitboxSize = math.max(4, HitboxSize - 2)
-end)
-
--- HITBOX LOOP
+-- MAIN LOOP
 RunService.RenderStepped:Connect(function()
-    if HitboxEnabled then
-        local ball = getBall()
-        if ball then
-            ball.Size = Vector3.new(HitboxSize,HitboxSize,HitboxSize)
-            ball.Transparency = 0.4
-            ball.Material = Enum.Material.ForceField
-        end
+    local ball = getBall()
+    if not ball then
+        hitbox.Transparency = 1
+        return
     end
-end)
 
--- DIRECTION ESP
-local lines = {}
-
-RunService.RenderStepped:Connect(function()
-    for _,l in pairs(lines) do
-        l:Remove()
-    end
-    table.clear(lines)
-
-    if not DirectionEnabled then return end
-
-    for _,plr in pairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = plr.Character.HumanoidRootPart
-            local startPos, vis1 = Camera:WorldToViewportPoint(hrp.Position)
-            local endPos, vis2 = Camera:WorldToViewportPoint(hrp.Position + hrp.CFrame.LookVector * 8)
-
-            if vis1 and vis2 then
-                local line = Drawing.new("Line")
-                line.From = Vector2.new(startPos.X,startPos.Y)
-                line.To = Vector2.new(endPos.X,endPos.Y)
-                line.Color = Color3.fromRGB(255,80,80)
-                line.Thickness = 2
-                line.Visible = true
-                table.insert(lines,line)
-            end
-        end
-    end
+    hitbox.Size = HitboxSize
+    hitbox.CFrame = ball.CFrame
+    hitbox.Transparency = HitboxOn and 0.6 or 1
 end)

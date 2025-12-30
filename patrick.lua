@@ -1,113 +1,117 @@
 --=====================================
--- AUTO HIT (REAL HITBOX METHOD)
+-- AUTO SWING - GUI FIXED
 --=====================================
 
+-- SERVICES
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 
 local LP = Players.LocalPlayer
+local PlayerGui = LP:WaitForChild("PlayerGui")
+
+-- CHARACTER
 local Char = LP.Character or LP.CharacterAdded:Wait()
+LP.CharacterAdded:Connect(function(c)
+    Char = c
+end)
 
 --=====================================
--- SETTINGS
+-- STATE
 --=====================================
-local ENABLE = false
-local HITBOX_SIZE = Vector3.new(10,10,10) -- OP SIZE
-local hitbox
-
---=====================================
--- CREATE HITBOX
---=====================================
-local function createHitbox()
-    if hitbox then hitbox:Destroy() end
-
-    hitbox = Instance.new("Part")
-    hitbox.Size = HITBOX_SIZE
-    hitbox.Transparency = 0.7
-    hitbox.Color = Color3.fromRGB(0,255,0)
-    hitbox.Material = Enum.Material.ForceField
-    hitbox.CanCollide = false
-    hitbox.Anchored = false
-    hitbox.Name = "AutoHitbox"
-    hitbox.Parent = Char
-
-    local weld = Instance.new("WeldConstraint", hitbox)
-    weld.Part0 = hitbox
-    weld.Part1 = Char:WaitForChild("HumanoidRootPart")
-end
+local AUTO = false
+local RANGE = 12
+local COOLDOWN = false
 
 --=====================================
--- BALL TOUCH = AUTO HIT
+-- FIND BALL
 --=====================================
-local function isBall(part)
-    return part:IsA("BasePart") and part.Name:lower():find("ball")
-end
-
-local debounce = false
-local function connectHit()
-    hitbox.Touched:Connect(function(part)
-        if debounce then return end
-        if isBall(part) then
-            debounce = true
-
-            -- fake swing by changing humanoid state
-            local hum = Char:FindFirstChildOfClass("Humanoid")
-            if hum then
-                hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-
-            task.delay(0.15, function()
-                debounce = false
-            end)
+local function getBall()
+    for _,v in pairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and v.Name:lower():find("ball") then
+            return v
         end
-    end)
+    end
 end
 
 --=====================================
--- GUI
+-- AUTO SWING LOOP
 --=====================================
-local gui = Instance.new("ScreenGui", LP.PlayerGui)
-gui.ResetOnSpawn = false
+RunService.RenderStepped:Connect(function()
+    if not AUTO then return end
+    if COOLDOWN then return end
+    if not Char or not Char:FindFirstChild("HumanoidRootPart") then return end
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,200,0,110)
-frame.Position = UDim2.new(0,30,0.45,0)
-frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
-frame.Active = true
-frame.Draggable = true
+    local ball = getBall()
+    if not ball then return end
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
-title.Text = "AUTO HIT (REAL)"
-title.TextColor3 = Color3.new(1,1,1)
-title.BackgroundColor3 = Color3.fromRGB(15,15,15)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 13
+    local hrp = Char.HumanoidRootPart
+    local dist = (ball.Position - hrp.Position).Magnitude
 
-local toggle = Instance.new("TextButton", frame)
-toggle.Size = UDim2.new(1,-20,0,40)
-toggle.Position = UDim2.new(0,10,0,40)
-toggle.Text = "AUTO HIT : OFF"
-toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
-toggle.TextColor3 = Color3.new(1,1,1)
-toggle.Font = Enum.Font.Gotham
-toggle.TextSize = 13
+    if dist <= RANGE then
+        COOLDOWN = true
 
-toggle.MouseButton1Click:Connect(function()
-    ENABLE = not ENABLE
-    toggle.Text = "AUTO HIT : "..(ENABLE and "ON" or "OFF")
+        -- simulasi swing (yang paling aman)
+        local hum = Char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
 
-    if ENABLE then
-        createHitbox()
-        connectHit()
-    else
-        if hitbox then hitbox:Destroy() hitbox = nil end
+        task.delay(0.25, function()
+            COOLDOWN = false
+        end)
     end
 end)
 
 --=====================================
--- HIDE GUI (=)
+-- GUI (PASTI MUNCUL)
+--=====================================
+local gui = Instance.new("ScreenGui")
+gui.Name = "AutoSwingGUI"
+gui.ResetOnSpawn = false
+gui.Parent = PlayerGui
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,220,0,120)
+frame.Position = UDim2.new(0,40,0.45,0)
+frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+frame.Active = true
+frame.Draggable = true
+frame.BorderSizePixel = 0
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0,8)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "AUTO SWING"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundColor3 = Color3.fromRGB(15,15,15)
+title.BorderSizePixel = 0
+
+local toggle = Instance.new("TextButton", frame)
+toggle.Size = UDim2.new(1,-20,0,45)
+toggle.Position = UDim2.new(0,10,0,45)
+toggle.Text = "AUTO SWING : OFF"
+toggle.Font = Enum.Font.Gotham
+toggle.TextSize = 13
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.BackgroundColor3 = Color3.fromRGB(40,40,40)
+toggle.BorderSizePixel = 0
+
+local tcorner = Instance.new("UICorner", toggle)
+tcorner.CornerRadius = UDim.new(0,6)
+
+toggle.MouseButton1Click:Connect(function()
+    AUTO = not AUTO
+    toggle.Text = "AUTO SWING : "..(AUTO and "ON" or "OFF")
+    toggle.BackgroundColor3 = AUTO and Color3.fromRGB(0,120,0) or Color3.fromRGB(40,40,40)
+end)
+
+--=====================================
+-- HIDE / SHOW GUI (=)
 --=====================================
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
@@ -115,3 +119,5 @@ UIS.InputBegan:Connect(function(input, gpe)
         frame.Visible = not frame.Visible
     end
 end)
+
+print("✅ Auto Swing GUI Loaded")

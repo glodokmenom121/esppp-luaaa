@@ -1,26 +1,20 @@
--- patrickkprojeck FINAL STABLE (NO DRAWING)
+-- patrickkprojeck FINAL FIXED (LINE + BONES)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- ================= GUI SAFE =================
+-- ================= GUI =================
 local gui = Instance.new("ScreenGui")
 gui.Name = "patrickkprojeck"
 gui.ResetOnSpawn = false
+pcall(function() gui.Parent = gethui() end)
+if not gui.Parent then gui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
-pcall(function()
-    gui.Parent = gethui()
-end)
-
-if not gui.Parent then
-    gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- ================= FRAME =================
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,260,0,240)
+frame.Size = UDim2.new(0,260,0,260)
 frame.Position = UDim2.new(0,50,0.3,0)
 frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.BorderSizePixel = 0
@@ -35,7 +29,7 @@ title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 20
 
-local function makeButton(text, y)
+local function btn(text,y)
     local b = Instance.new("TextButton", frame)
     b.Size = UDim2.new(1,-20,0,40)
     b.Position = UDim2.new(0,10,0,y)
@@ -47,96 +41,117 @@ local function makeButton(text, y)
     return b
 end
 
-local espBtn   = makeButton("ESP : OFF", 50)
-local textBtn  = makeButton("TEXT : ON", 100)
-local lineBtn  = makeButton("TRACER : OFF", 150)
-local jumpBtn  = makeButton("INF JUMP : OFF", 200)
+local espBtn   = btn("ESP : OFF",50)
+local textBtn  = btn("TEXT : ON",100)
+local lineBtn  = btn("LINE : OFF",150)
+local boneBtn  = btn("BONES : OFF",200)
 
 -- ================= SETTINGS =================
-local ESP = false
-local TEXT = true
-local TRACER = false
-local INFJUMP = false
-
-local espFolder = Instance.new("Folder", workspace)
-espFolder.Name = "patrickk_esp"
+local ESP, TEXT, LINE, BONES = false, true, false, false
+local drawings = {}
 
 -- ================= CLEAN =================
-local function clearESP(plr)
-    if espFolder:FindFirstChild(plr.Name) then
-        espFolder[plr.Name]:Destroy()
+local function clear(plr)
+    if drawings[plr] then
+        for _,d in pairs(drawings[plr]) do d:Remove() end
+        drawings[plr] = nil
     end
 end
 
-Players.PlayerRemoving:Connect(clearESP)
+Players.PlayerRemoving:Connect(clear)
 
--- ================= CREATE ESP =================
-local function createESP(plr)
-    clearESP(plr)
+-- ================= CREATE =================
+local function create(plr)
+    drawings[plr] = {
+        text = Drawing.new("Text"),
+        line = Drawing.new("Line"),
+        bones = {}
+    }
 
-    local folder = Instance.new("Folder", espFolder)
-    folder.Name = plr.Name
+    drawings[plr].text.Center = true
+    drawings[plr].text.Outline = true
+    drawings[plr].text.Size = 14
+end
 
-    local bill = Instance.new("BillboardGui", folder)
-    bill.Name = "ESP"
-    bill.Size = UDim2.new(0,200,0,50)
-    bill.AlwaysOnTop = true
-
-    local label = Instance.new("TextLabel", bill)
-    label.Size = UDim2.new(1,0,1,0)
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1,1,1)
-    label.TextStrokeTransparency = 0
-    label.Font = Enum.Font.SourceSansBold
-    label.TextSize = 14
-
-    local tracer = Instance.new("Beam", folder)
-    tracer.Enabled = false
-    tracer.Width0 = 0.15
-    tracer.Width1 = 0.15
-    tracer.Color = ColorSequence.new(Color3.new(1,1,1))
-
-    return bill, label, tracer
+-- ================= BONE MAKER =================
+local function boneLine()
+    local l = Drawing.new("Line")
+    l.Thickness = 2
+    l.Color = Color3.new(1,1,1)
+    return l
 end
 
 -- ================= ESP LOOP =================
 RunService.RenderStepped:Connect(function()
-    if not ESP then
-        espFolder:ClearAllChildren()
-        return
-    end
-
-    for _,plr in ipairs(Players:GetPlayers()) do
+    for _,plr in pairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = plr.Character.HumanoidRootPart
+            if not ESP then clear(plr) continue end
+            if not drawings[plr] then create(plr) end
 
-            local folder = espFolder:FindFirstChild(plr.Name)
-            local bill, label, tracer
+            local char = plr.Character
+            local hrp = char.HumanoidRootPart
+            local pos, onscreen = Camera:WorldToViewportPoint(hrp.Position)
+            if not onscreen then continue end
 
-            if not folder then
-                bill, label, tracer = createESP(plr)
+            local dist = math.floor((hrp.Position - Camera.CFrame.Position).Magnitude)
+
+            -- TEXT
+            local txt = drawings[plr].text
+            txt.Visible = TEXT
+            txt.Text = plr.Name.." ["..dist.."m]"
+            txt.Position = Vector2.new(pos.X, pos.Y - 50)
+            txt.Color = Color3.new(1,1,1)
+
+            -- LINE TRACER
+            local ln = drawings[plr].line
+            ln.Visible = LINE
+            ln.Thickness = 2
+            ln.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+            ln.To = Vector2.new(pos.X, pos.Y)
+            ln.Color = Color3.new(1,1,1)
+
+            -- BONES
+            if BONES then
+                local function draw(a,b)
+                    local A,onA = Camera:WorldToViewportPoint(a.Position)
+                    local B,onB = Camera:WorldToViewportPoint(b.Position)
+                    if onA and onB then
+                        local l = boneLine()
+                        l.From = Vector2.new(A.X,A.Y)
+                        l.To   = Vector2.new(B.X,B.Y)
+                        table.insert(drawings[plr].bones,l)
+                    end
+                end
+
+                for _,l in pairs(drawings[plr].bones) do l:Remove() end
+                drawings[plr].bones = {}
+
+                if char:FindFirstChild("Head") then
+                    draw(char.Head, hrp)
+                end
+                if char:FindFirstChild("LeftHand") then
+                    draw(char.LeftHand, hrp)
+                end
+                if char:FindFirstChild("RightHand") then
+                    draw(char.RightHand, hrp)
+                end
+                if char:FindFirstChild("LeftFoot") then
+                    draw(char.LeftFoot, hrp)
+                end
+                if char:FindFirstChild("RightFoot") then
+                    draw(char.RightFoot, hrp)
+                end
             else
-                bill = folder:FindFirstChild("ESP")
-                label = bill and bill:FindFirstChildOfClass("TextLabel")
-                tracer = folder:FindFirstChildOfClass("Beam")
+                for _,l in pairs(drawings[plr].bones) do l:Remove() end
+                drawings[plr].bones = {}
             end
-
-            if bill and label then
-                bill.Adornee = hrp
-                bill.Enabled = TEXT
-
-                local dist = math.floor((hrp.Position - workspace.CurrentCamera.CFrame.Position).Magnitude)
-                label.Text = plr.Name.." ["..dist.."m]"
-            end
-
-            if tracer then
-                tracer.Enabled = TRACER
-            end
+        else
+            clear(plr)
         end
     end
 end)
 
--- ================= BUTTONS =================
+-- ================= BUTTON =================
 espBtn.MouseButton1Click:Connect(function()
     ESP = not ESP
     espBtn.Text = "ESP : "..(ESP and "ON" or "OFF")
@@ -148,31 +163,21 @@ textBtn.MouseButton1Click:Connect(function()
 end)
 
 lineBtn.MouseButton1Click:Connect(function()
-    TRACER = not TRACER
-    lineBtn.Text = "TRACER : "..(TRACER and "ON" or "OFF")
+    LINE = not LINE
+    lineBtn.Text = "LINE : "..(LINE and "ON" or "OFF")
 end)
 
-jumpBtn.MouseButton1Click:Connect(function()
-    INFJUMP = not INFJUMP
-    jumpBtn.Text = "INF JUMP : "..(INFJUMP and "ON" or "OFF")
+boneBtn.MouseButton1Click:Connect(function()
+    BONES = not BONES
+    boneBtn.Text = "BONES : "..(BONES and "ON" or "OFF")
 end)
 
--- ================= INFINITE JUMP =================
-RunService.RenderStepped:Connect(function()
-    if INFJUMP and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
--- ================= OPEN / CLOSE (= / +) =================
-UserInputService.InputBegan:Connect(function(input, gp)
+-- ================= OPEN / CLOSE (+) =================
+UserInputService.InputBegan:Connect(function(i,gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.Equals then
+    if i.KeyCode == Enum.KeyCode.Equals then
         frame.Visible = not frame.Visible
     end
 end)
 
-print("patrickkprojeck loaded successfully")
+print("patrickkprojeck loaded | LINE + BONES OK")

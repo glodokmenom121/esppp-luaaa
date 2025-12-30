@@ -169,3 +169,81 @@ _G.ToggleText = function(v) TEXT_ON = v if not v then ClearESP() end end
 _G.ToggleLine = function(v) LINE_ON = v if not v then ClearESP() end end
 _G.ToggleBones = function(v) BONES_ON = v if not v then ClearESP() end end
 _G.ToggleFly = function(v) FLY_ON = v end
+--==============================
+-- SIMPLE GUI
+--==============================
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.Name = "patrickkkprojeck_GUI"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,220,0,260)
+frame.Position = UDim2.new(0,20,0,120)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,40)
+title.Text = "patrickkkprojeck"
+title.BackgroundColor3 = Color3.fromRGB(18,18,18)
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
+
+--==============================
+-- BUTTON MAKER
+--==============================
+local function makeButton(text, y, callback)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1,-20,0,35)
+    btn.Position = UDim2.new(0,10,0,y)
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 13
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+--==============================
+-- TOGGLES
+--==============================
+local esp=false
+local text=false
+local line=false
+local bones=false
+local fly=false
+
+makeButton("ESP : OFF", 50, function(btn)
+    esp = not esp
+    btn.Text = "ESP : "..(esp and "ON" or "OFF")
+    _G.ToggleESP(esp)
+end)
+
+makeButton("TEXT : OFF", 90, function(btn)
+    text = not text
+    btn.Text = "TEXT : "..(text and "ON" or "OFF")
+    _G.ToggleText(text)
+end)
+
+makeButton("LINE : OFF", 130, function(btn)
+    line = not line
+    btn.Text = "LINE : "..(line and "ON" or "OFF")
+    _G.ToggleLine(line)
+end)
+
+makeButton("BONES : OFF", 170, function(btn)
+    bones = not bones
+    btn.Text = "BONES : "..(bones and "ON" or "OFF")
+    _G.ToggleBones(bones)
+end)
+
+makeButton("INF JUMP : OFF", 210, function(btn)
+    fly = not fly
+    btn.Text = "INF JUMP : "..(fly and "ON" or "OFF")
+    _G.ToggleFly(fly)
+end)

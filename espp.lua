@@ -1,99 +1,74 @@
---// Volleyball Legends - Ball Hitbox ONLY
---// NO AUTO SWING | NO AUTO CLICK
+local Window = Rayfield:CreateWindow({
+   Name = "PatrickPricst",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "kontoll",
+   LoadingSubtitle = "by patrickbrob",
+   ShowText = "Rayfield", -- for mobile users to unhide rayfield, change if you'd like
+   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
 
-local HitboxOn = false
-local HitboxSize = Vector3.new(8,8,8)
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
 
--- FIND BALL
-local function getBall()
-    for _,v in pairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") and v.Name:lower():find("ball") then
-            return v
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Big Hub"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Memek",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+
+local Tab = Window:CreateTab("Tab Example", 4483362458) -- Title, Image
+
+
+local Button = Tab:CreateButton({
+   Name = "Button Example",
+   Callback = function()
+   end,
+})
+
+
+local Toggle = Tab:CreateToggle({
+   Name = "Infinite Jump",
+   CurrentValue = false,
+   Flag = "Toggle1", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+   local player = game.Players.LocalPlayer
+local humanoid = player.Character:WaitForChild("Humanoid")
+local UserInputService = game:GetService("UserInputService")
+
+local jumping = false
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        jumping = true
+        while jumping do
+            humanoid.Jump = true
+            wait(0.1)  -- Delay kecil untuk menghindari spam
         end
     end
-end
-
--- HITBOX PART
-local hitbox = Instance.new("Part")
-hitbox.Name = "BallHitbox"
-hitbox.Anchored = true
-hitbox.CanCollide = false
-hitbox.Material = Enum.Material.ForceField
-hitbox.Color = Color3.fromRGB(0,170,255)
-hitbox.Transparency = 1
-hitbox.Parent = workspace
-
--- GUI
-local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "BallHitboxGUI"
-
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromScale(0.22,0.26)
-frame.Position = UDim2.fromScale(0.05,0.35)
-frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
-frame.Active = true
-frame.Draggable = true
-
-local toggleMenu = Instance.new("TextButton", frame)
-toggleMenu.Size = UDim2.fromScale(1,0.2)
-toggleMenu.Text = "+  HITBOX MENU"
-toggleMenu.TextScaled = true
-toggleMenu.BackgroundColor3 = Color3.fromRGB(35,35,35)
-toggleMenu.TextColor3 = Color3.new(1,1,1)
-
-local content = Instance.new("Frame", frame)
-content.Position = UDim2.fromScale(0,0.2)
-content.Size = UDim2.fromScale(1,0.8)
-content.BackgroundTransparency = 1
-content.Visible = false
-
-toggleMenu.MouseButton1Click:Connect(function()
-    content.Visible = not content.Visible
 end)
 
-local function button(text,y,callback)
-    local b = Instance.new("TextButton", content)
-    b.Size = UDim2.fromScale(0.9,0.18)
-    b.Position = UDim2.fromScale(0.05,y)
-    b.Text = text
-    b.TextScaled = true
-    b.BackgroundColor3 = Color3.fromRGB(55,55,55)
-    b.TextColor3 = Color3.new(1,1,1)
-    b.MouseButton1Click:Connect(function()
-        callback(b)
-    end)
-end
-
-button("Hitbox : OFF",0.05,function(b)
-    HitboxOn = not HitboxOn
-    b.Text = "Hitbox : "..(HitboxOn and "ON" or "OFF")
-end)
-
-button("Size +",0.3,function()
-    HitboxSize += Vector3.new(2,2,2)
-end)
-
-button("Size -",0.55,function()
-    HitboxSize = Vector3.new(
-        math.max(4,HitboxSize.X-2),
-        math.max(4,HitboxSize.Y-2),
-        math.max(4,HitboxSize.Z-2)
-    )
-end)
-
--- MAIN LOOP
-RunService.RenderStepped:Connect(function()
-    local ball = getBall()
-    if not ball then
-        hitbox.Transparency = 1
-        return
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Space then
+        jumping = false
     end
-
-    hitbox.Size = HitboxSize
-    hitbox.CFrame = ball.CFrame
-    hitbox.Transparency = HitboxOn and 0.6 or 1
 end)
+})
